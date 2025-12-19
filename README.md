@@ -70,7 +70,7 @@ Bilgisayarınızda `.github/workflows/` klasörünü oluşturun. İçine `cevirm
 *(Bu kod klasördeki tüm .md dosyalarını bulur ve döngüye sokar)*
 
 ```yaml
-name: AI Translator (Fixed Split)
+name: AI Translator (Robust)
 
 on:
   push:
@@ -105,14 +105,21 @@ jobs:
           import re
           from openai import OpenAI
 
-          # --- 1. AYARLAR VE SABİTLER ---
+          # --- 1. AYARLAR ---
           endpoint = "https://models.github.ai/inference"
           token = os.environ.get("GITHUB_TOKEN")
           model_name = "gpt-4o"
           
-          # HATA ÇÖZÜMÜ: Etiketleri buraya değişken olarak aldık
-          TAG_START = ""
-          TAG_END = ""
+          # --- KRİTİK DÜZELTME: ASCII İLE ETİKET OLUŞTURMA ---
+          # YAML parser'ın HTML yorumlarını silmesini engellemek için
+          # karakterleri kodla oluşturuyoruz. 
+          # chr(60) = '<', chr(62) = '>'
+          
+          TAG_START = chr(60) + "!-- LANGUAGE_TABLE_START --" + chr(62)
+          TAG_END   = chr(60) + "!-- LANGUAGE_TABLE_END --" + chr(62)
+
+          # Debug için yazdıralım (Loglarda görebilirsiniz)
+          print(f"Etiketler oluşturuldu: {TAG_START} ... {TAG_END}")
 
           if not token:
               print("::error::Token bulunamadi! Secret ayarlarini kontrol edin.")
@@ -121,7 +128,6 @@ jobs:
           client = OpenAI(base_url=endpoint, api_key=token)
 
           # --- 2. DOSYALARI BULMA ---
-          # Kök dizindeki tüm .md dosyalarını al (translations klasörü hariç)
           md_files = [f for f in os.listdir('.') if f.endswith('.md') and os.path.isfile(f)]
 
           if not md_files:
@@ -134,15 +140,10 @@ jobs:
           for file_name in md_files:
               print(f"\n--- İşleniyor: {file_name} ---")
 
-              # Link Şablonları (Değişkenleri kullanarak)
-              header_root = f"""{TAG_START}
-          [ 🇹🇷 Türkçe ]({file_name}) | [ 🇺🇸 English ](translations/en/{file_name})
-          {TAG_END}
-          """
-              header_en = f"""{TAG_START}
-          [ 🇹🇷 Türkçe ](../../{file_name}) | [ 🇺🇸 English ]({file_name})
-          {TAG_END}
-          """
+              # Link Şablonları
+              header_root = f"{TAG_START}\n[ 🇹🇷 Türkçe ]({file_name}) | [ 🇺🇸 English ](translations/en/{file_name})\n{TAG_END}\n"
+              
+              header_en = f"{TAG_START}\n[ 🇹🇷 Türkçe ](../../{file_name}) | [ 🇺🇸 English ]({file_name})\n{TAG_END}\n"
 
               # Dosyayı Oku
               try:
@@ -154,8 +155,10 @@ jobs:
 
               # Ana Dosyaya Link Ekleme
               if TAG_START in content:
-                  # Regex yerine düz string değişimi daha güvenli olabilir ama pattern koruyoruz
-                  pattern = f"{TAG_START}.*?{TAG_END}"
+                  # Regex yerine düz değiştirme yapıyoruz, çünkü regex özel karakterlerde hata verebilir
+                  # Basit mantık: Start ve End arasını sil, yenisini koy.
+                  # Ancak regex daha temizdir, sadece değişkenleri escape edelim.
+                  pattern = re.escape(TAG_START) + r".*?" + re.escape(TAG_END)
                   content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
               else:
                   content = header_root.strip() + "\n\n" + content
@@ -163,17 +166,19 @@ jobs:
               with open(file_name, "w", encoding="utf-8") as f:
                   f.write(content)
 
-              # Çeviri Hazırlığı (HATA ÇIKAN YER DÜZELTİLDİ)
-              # Artık TAG_END değişkenini kullanıyoruz, string boş gelme şansı yok.
-              if TAG_END in content:
-                  text_to_translate = content.split(TAG_END)[-1].strip()
+              # --- ÇEVİRİ KISMI (Hata veren yer burasıydı) ---
+              
+              # Split etmeden önce kontrol ediyoruz
+              parts = content.split(TAG_END)
+              
+              if len(parts) > 1:
+                  text_to_translate = parts[-1].strip()
               else:
-                  # Eğer tag eklenememişse (imkansız ama güvenlik önlemi) tüm içeriği al
-                  text_to_translate = content
+                  # Eğer split çalışmazsa (etiket yoksa) tüm içeriği al
+                  text_to_translate = content.replace(header_root.strip(), "").strip()
 
-              # Boş içerik kontrolü
               if not text_to_translate:
-                  print(f"UYARI: {file_name} içinde çevrilecek metin bulunamadı.")
+                  print(f"UYARI: {file_name} içeriği boş veya sadece linklerden oluşuyor.")
                   continue
 
               # Yapay Zeka Çağrısı
@@ -208,7 +213,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "🤖 Tüm Belgeler Çevrildi" || echo "Değişiklik yok"
+          git commit -m "🤖 Tüm Belgeler Çevrildi (Fix)" || echo "Değişiklik yok"
           git push
 ```
 
