@@ -1,4 +1,4 @@
-name: AI Translator (Custom)
+name: AI Translator (Custom Script)
 
 on:
   push:
@@ -20,72 +20,83 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: OpenAI Kütüphanesi Kuruluyor
-        # Hazır aracı değil, sadece motoru kuruyoruz
+      - name: Gerekli Kütüphaneyi Kur
         run: pip install openai
 
       - name: Çeviri İşlemi (Python Script)
         env:
+          # Secret'ı burada "MY_API_KEY" adıyla içeri alıyoruz
           MY_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: python
         run: |
           import os
           from openai import OpenAI
 
-          # --- AYARLAR ---
+          print("--- 1. Anahtar Kontrolü ---")
           api_key = os.environ.get("MY_API_KEY")
-          base_url = "https://models.inference.ai.azure.com"
-          model_name = "gpt-4o"
-          files_to_translate = ["README.md"] # Sadece README dosyasını çeviriyoruz
           
           if not api_key:
-              print("::error::Anahtar bulunamadi! Secret ayarlarini kontrol edin.")
+              print("::error::Anahtar (Secret) hic bulunamadi!")
               exit(1)
+          
+          # Anahtarın başını kontrol et (Güvenlik için tamamını yazdırmıyoruz)
+          if api_key.startswith("github_pat_"):
+              print("Anahtar formati DOGRU: github_pat_... ile basliyor.")
+          else:
+              print(f"UYARI: Anahtar farkli bir formatta: {api_key[:5]}...")
 
-          print("1. Baglanti kuruluyor...")
-          client = OpenAI(base_url=base_url, api_key=api_key)
-
-          for file_name in files_to_translate:
-              if not os.path.exists(file_name):
-                  continue
+          print("--- 2. Baglanti Kuruluyor ---")
+          try:
+              client = OpenAI(
+                  base_url="https://models.inference.ai.azure.com",
+                  api_key=api_key
+              )
               
-              print(f"2. {file_name} okunuyor...")
+              # Hedef Dosya
+              file_name = "README.md"
+              
+              if not os.path.exists(file_name):
+                  print(f"HATA: {file_name} bulunamadi.")
+                  exit(0)
+
+              print(f"--- 3. {file_name} Okunuyor ---")
               with open(file_name, "r", encoding="utf-8") as f:
                   content = f.read()
 
-              # Linkler zaten varsa tekrar ekleme
+              # Linkleri ekle (Eğer yoksa)
               if "" not in content:
+                  print("Linkler ekleniyor...")
                   header = "\n[ 🇹🇷 Turkish ](README.md) | [ 🇺🇸 English ](translations/en/README.md)\n\n\n"
                   content = header + content
-                  # Orijinal dosyaya linkleri ekleyip kaydet
+                  # Orijinal dosyayı güncelle
                   with open(file_name, "w", encoding="utf-8") as f:
                       f.write(content)
 
-              print(f"3. {file_name} cevriliyor (Azure GPT-4o)...")
-              try:
-                  response = client.chat.completions.create(
-                      model=model_name,
-                      messages=[
-                          {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain, just translate."},
-                          {"role": "user", "content": content}
-                      ]
-                  )
-                  translated_text = response.choices[0].message.content
-                  
-                  # Klasörü oluştur
-                  os.makedirs("translations/en", exist_ok=True)
-                  output_path = f"translations/en/{file_name}"
-                  
-                  # Kaydet
-                  with open(output_path, "w", encoding="utf-8") as f:
-                      f.write(translated_text)
-                  print(f"4. BASARILI! {output_path} kaydedildi.")
-                  
-              except Exception as e:
-                  print(f"::error::Ceviri hatasi: {e}")
-                  exit(1)
+              print("--- 4. Yapay Zekaya Gonderiliyor (GPT-4o) ---")
+              response = client.chat.completions.create(
+                  model="gpt-4o",
+                  messages=[
+                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Preserve code blocks exactly."},
+                      {"role": "user", "content": content}
+                  ]
+              )
+              
+              translated_text = response.choices[0].message.content
+              
+              # Kaydet
+              os.makedirs("translations/en", exist_ok=True)
+              output_path = f"translations/en/{file_name}"
+              
+              with open(output_path, "w", encoding="utf-8") as f:
+                  f.write(translated_text)
+              
+              print(f"--- 5. BASARILI! Dosya kaydedildi: {output_path} ---")
 
-      - name: Değişiklikleri Kaydet ve Gönder
+          except Exception as e:
+              print(f"::error::Python Hatasi: {e}")
+              exit(1)
+
+      - name: Kaydet ve Gönder
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
