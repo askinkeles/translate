@@ -1,7 +1,7 @@
 <!-- LANGUAGE_TABLE_START -->
 <div align="center">
   
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/Lang-Türkçe-0059B3?style=flat&logo=turkey&logoColor=white" alt="Türkçe"/></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/Dil-Türkçe-0059B3?style=flat&logo=turkey&logoColor=white" alt="Türkçe"/></a>
   <a href="translations/en/LICENSE.md"><img src="https://img.shields.io/badge/Lang-English-gray?style=flat&logo=us&logoColor=white" alt="English"/></a>
   
 </div>
