@@ -1,3 +1,7 @@
+<!-- LANGUAGE_TABLE_START -->
+[ 🇹🇷 Türkçe ](README.md) | [ 🇺🇸 English ](translations/en/README.md)
+<!-- LANGUAGE_TABLE_END -->
+
 # 🌍 GitHub Models ile Otomatik Doküman Çevirmeni (All-in-One Translator)
 
 Bu proje, reponuzdaki **tüm Markdown (`.md`) dosyalarını** (örneğin `README.md`, `CONTRIBUTING.md`, `LICENSE.md` vb.) otomatik olarak algılar, **GitHub Models (GPT-4o)** kullanarak İngilizceye çevirir ve her dosyanın başına diller arası geçiş sağlayan navigasyon linklerini ekler.
