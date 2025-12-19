@@ -1,4 +1,4 @@
-name: AI Translator
+name: AI Translator (Custom)
 
 on:
   push:
@@ -20,33 +20,75 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Aracı Yükle
-        run: pip install co-op-translator
+      - name: OpenAI Kütüphanesi Kuruluyor
+        # Hazır aracı değil, sadece motoru kuruyoruz
+        run: pip install openai
 
-      # --- İŞTE SİHİRLİ DOKUNUŞ BURASI ---
-      # Environment variable yerine, doğrudan .env dosyası oluşturuyoruz.
-      - name: .env Dosyası Oluşturuluyor
+      - name: Çeviri İşlemi (Python Script)
+        env:
+          MY_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: python
         run: |
-          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-          echo "OPENAI_BASE_URL=https://models.inference.ai.azure.com" >> .env
-          echo "OPENAI_MODEL=gpt-4o" >> .env
-          echo "Dosya oluşturuldu. Anahtar kontrol ediliyor..."
-          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
-            echo "::error::DİKKAT! Secret BOŞ geliyor. Ayarlarda sorun var!"
-            exit 1
-          else
-            echo "Anahtar mevcut. İşlem devam ediyor."
-          fi
+          import os
+          from openai import OpenAI
 
-      - name: Çeviriyi Başlat
-        # Artık env: kısmına ihtiyacımız yok, çünkü .env dosyası var.
-        run: translate -l "en"
+          # --- AYARLAR ---
+          api_key = os.environ.get("MY_API_KEY")
+          base_url = "https://models.inference.ai.azure.com"
+          model_name = "gpt-4o"
+          files_to_translate = ["README.md"] # Sadece README dosyasını çeviriyoruz
+          
+          if not api_key:
+              print("::error::Anahtar bulunamadi! Secret ayarlarini kontrol edin.")
+              exit(1)
 
-      - name: Kaydet ve Gönder
+          print("1. Baglanti kuruluyor...")
+          client = OpenAI(base_url=base_url, api_key=api_key)
+
+          for file_name in files_to_translate:
+              if not os.path.exists(file_name):
+                  continue
+              
+              print(f"2. {file_name} okunuyor...")
+              with open(file_name, "r", encoding="utf-8") as f:
+                  content = f.read()
+
+              # Linkler zaten varsa tekrar ekleme
+              if "" not in content:
+                  header = "\n[ 🇹🇷 Turkish ](README.md) | [ 🇺🇸 English ](translations/en/README.md)\n\n\n"
+                  content = header + content
+                  # Orijinal dosyaya linkleri ekleyip kaydet
+                  with open(file_name, "w", encoding="utf-8") as f:
+                      f.write(content)
+
+              print(f"3. {file_name} cevriliyor (Azure GPT-4o)...")
+              try:
+                  response = client.chat.completions.create(
+                      model=model_name,
+                      messages=[
+                          {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain, just translate."},
+                          {"role": "user", "content": content}
+                      ]
+                  )
+                  translated_text = response.choices[0].message.content
+                  
+                  # Klasörü oluştur
+                  os.makedirs("translations/en", exist_ok=True)
+                  output_path = f"translations/en/{file_name}"
+                  
+                  # Kaydet
+                  with open(output_path, "w", encoding="utf-8") as f:
+                      f.write(translated_text)
+                  print(f"4. BASARILI! {output_path} kaydedildi.")
+                  
+              except Exception as e:
+                  print(f"::error::Ceviri hatasi: {e}")
+                  exit(1)
+
+      - name: Değişiklikleri Kaydet ve Gönder
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          rm .env # Güvenlik için iş bitince dosyayı siliyoruz
           git add .
-          git commit -m "🤖 Linkler ve Ceviri Eklendi" || exit 0
+          git commit -m "🤖 Custom Script ile Çeviri Yapıldı" || echo "Değişiklik yok"
           git push
