@@ -1,4 +1,4 @@
-name: AI Translator (Custom Script)
+name: AI Translator (Custom)
 
 on:
   push:
@@ -20,16 +20,18 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Gerekli Kütüphaneyi Kur
+      - name: OpenAI Kütüphanesi Kuruluyor
+        # Hazır aracı değil, sadece resmi OpenAI kütüphanesini kuruyoruz
         run: pip install openai
 
       - name: Çeviri İşlemi (Python Script)
         env:
-          # Secret'ı burada "MY_API_KEY" adıyla içeri alıyoruz
+          # Secret'ı "MY_API_KEY" adıyla içeri alıyoruz
           MY_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: python
         run: |
           import os
+          import sys
           from openai import OpenAI
 
           print("--- 1. Anahtar Kontrolü ---")
@@ -37,27 +39,23 @@ jobs:
           
           if not api_key:
               print("::error::Anahtar (Secret) hic bulunamadi!")
-              exit(1)
+              sys.exit(1)
           
-          # Anahtarın başını kontrol et (Güvenlik için tamamını yazdırmıyoruz)
-          if api_key.startswith("github_pat_"):
-              print("Anahtar formati DOGRU: github_pat_... ile basliyor.")
-          else:
-              print(f"UYARI: Anahtar farkli bir formatta: {api_key[:5]}...")
+          print("Anahtar mevcut, islem basliyor...")
 
-          print("--- 2. Baglanti Kuruluyor ---")
+          # --- 2. Baglanti Kuruluyor ---
           try:
               client = OpenAI(
                   base_url="https://models.inference.ai.azure.com",
                   api_key=api_key
               )
               
-              # Hedef Dosya
+              # Hangi dosya çevrilecek?
               file_name = "README.md"
               
               if not os.path.exists(file_name):
                   print(f"HATA: {file_name} bulunamadi.")
-                  exit(0)
+                  sys.exit(0)
 
               print(f"--- 3. {file_name} Okunuyor ---")
               with open(file_name, "r", encoding="utf-8") as f:
@@ -68,15 +66,16 @@ jobs:
                   print("Linkler ekleniyor...")
                   header = "\n[ 🇹🇷 Turkish ](README.md) | [ 🇺🇸 English ](translations/en/README.md)\n\n\n"
                   content = header + content
-                  # Orijinal dosyayı güncelle
+                  # Orijinal dosyayı güncelle (Linkleri ekle)
                   with open(file_name, "w", encoding="utf-8") as f:
                       f.write(content)
 
               print("--- 4. Yapay Zekaya Gonderiliyor (GPT-4o) ---")
+              # Azure/GitHub Models çağrısı
               response = client.chat.completions.create(
                   model="gpt-4o",
                   messages=[
-                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Preserve code blocks exactly."},
+                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Preserve code blocks exactly. Do not translate the LANGUAGE_TABLE tags."},
                       {"role": "user", "content": content}
                   ]
               )
@@ -94,7 +93,7 @@ jobs:
 
           except Exception as e:
               print(f"::error::Python Hatasi: {e}")
-              exit(1)
+              sys.exit(1)
 
       - name: Kaydet ve Gönder
         run: |
