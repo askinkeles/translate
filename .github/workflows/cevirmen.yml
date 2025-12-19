@@ -1,10 +1,10 @@
-name: AI Translator (Custom)
+name: AI Translator (Final)
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main"]
     paths:
-      - '**.md'
+      - '**.md' # Sadece md dosyaları değişince çalışır
 
 permissions:
   contents: write
@@ -20,64 +20,64 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: OpenAI Kütüphanesi Kuruluyor
-        # Hazır aracı değil, sadece resmi OpenAI kütüphanesini kuruyoruz
+      - name: OpenAI Kütüphanesi
         run: pip install openai
 
-      - name: Çeviri İşlemi (Python Script)
+      - name: Çeviri Başlat (Python Script)
         env:
-          # Secret'ı "MY_API_KEY" adıyla içeri alıyoruz
-          MY_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Secret'ı alıp ortam değişkenine atıyoruz
+          GITHUB_TOKEN: ${{ secrets.OPENAI_API_KEY }}
         shell: python
         run: |
           import os
           import sys
           from openai import OpenAI
 
-          print("--- 1. Anahtar Kontrolü ---")
-          api_key = os.environ.get("MY_API_KEY")
+          print("--- 1. Ayarlar Yükleniyor ---")
           
-          if not api_key:
-              print("::error::Anahtar (Secret) hic bulunamadi!")
-              sys.exit(1)
-          
-          print("Anahtar mevcut, islem basliyor...")
+          # SENİN BULDUĞUN RESMİ ADRES:
+          endpoint = "https://models.github.ai/inference"
+          token = os.environ.get("GITHUB_TOKEN")
+          model_name = "gpt-4o"
 
-          # --- 2. Baglanti Kuruluyor ---
+          if not token:
+              print("::error::Token bulunamadi! Secret ayarlarini kontrol et.")
+              sys.exit(1)
+
+          print("--- 2. İstemci Başlatılıyor ---")
           try:
               client = OpenAI(
-                  base_url="https://models.inference.ai.azure.com",
-                  api_key=api_key
+                  base_url=endpoint,
+                  api_key=token
               )
               
-              # Hangi dosya çevrilecek?
               file_name = "README.md"
               
               if not os.path.exists(file_name):
-                  print(f"HATA: {file_name} bulunamadi.")
+                  print("README dosyasi yok, islem iptal.")
                   sys.exit(0)
 
-              print(f"--- 3. {file_name} Okunuyor ---")
+              # Dosyayı Oku
               with open(file_name, "r", encoding="utf-8") as f:
                   content = f.read()
 
-              # Linkleri ekle (Eğer yoksa)
+              # Linkleri Ekle (Yoksa)
               if "" not in content:
                   print("Linkler ekleniyor...")
                   header = "\n[ 🇹🇷 Turkish ](README.md) | [ 🇺🇸 English ](translations/en/README.md)\n\n\n"
                   content = header + content
-                  # Orijinal dosyayı güncelle (Linkleri ekle)
                   with open(file_name, "w", encoding="utf-8") as f:
                       f.write(content)
 
-              print("--- 4. Yapay Zekaya Gonderiliyor (GPT-4o) ---")
-              # Azure/GitHub Models çağrısı
+              print("--- 3. Çeviri Yapılıyor (GitHub Models: gpt-4o) ---")
               response = client.chat.completions.create(
-                  model="gpt-4o",
                   messages=[
-                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Preserve code blocks exactly. Do not translate the LANGUAGE_TABLE tags."},
+                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain, just translate."},
                       {"role": "user", "content": content}
-                  ]
+                  ],
+                  model=model_name,
+                  temperature=1.0,
+                  max_tokens=4096 
               )
               
               translated_text = response.choices[0].message.content
@@ -88,17 +88,17 @@ jobs:
               
               with open(output_path, "w", encoding="utf-8") as f:
                   f.write(translated_text)
-              
-              print(f"--- 5. BASARILI! Dosya kaydedildi: {output_path} ---")
+                  
+              print(f"--- 4. BAŞARILI! Dosya kaydedildi: {output_path} ---")
 
           except Exception as e:
-              print(f"::error::Python Hatasi: {e}")
+              print(f"::error::Bir hata oluştu: {e}")
               sys.exit(1)
 
-      - name: Kaydet ve Gönder
+      - name: Değişiklikleri Gönder
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "🤖 Custom Script ile Çeviri Yapıldı" || echo "Değişiklik yok"
+          git commit -m "🤖 Çeviri Tamamlandı" || echo "Değişiklik yok"
           git push
