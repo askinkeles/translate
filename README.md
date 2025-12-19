@@ -3,7 +3,19 @@
 <!-- LANGUAGE_TABLE_END -->
 
 # 🌍 GitHub Models ile Otomatik Doküman Çevirmeni (All-in-One Translator)
+<div align="center">
 
+  [![AI Translator](https://github.com/askinkeles/translate/actions/workflows/cevirmen.yml/badge.svg)](https://github.com/askinkeles/translate/actions/workflows/cevirmen.yml)
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+
+  ![Visitors](https://visitor-badge.laobi.icu/badge?page_id=askinkeles.translate)
+
+  [![GitHub forks](https://img.shields.io/github/forks/askinkeles/translate?style=social)](https://github.com/askinkeles/translate/network)
+  [![GitHub stars](https://img.shields.io/github/stars/askinkeles/translate?style=social)](https://github.com/askinkeles/translate/stargazers)
+
+</div>
+---
 Bu proje, reponuzdaki **tüm Markdown (`.md`) dosyalarını** (örneğin `README.md`, `CONTRIBUTING.md`, `LICENSE.md` vb.) otomatik olarak algılar, **GitHub Models (GPT-4o)** kullanarak İngilizceye çevirir ve her dosyanın başına diller arası geçiş sağlayan navigasyon linklerini ekler.
 
 > **🎯 Amaç:** Teknik dokümantasyonunuzu sadece Türkçe yazın; sistem diğer tüm dosyaları ve İngilizce versiyonlarını otomatik oluştursun.
