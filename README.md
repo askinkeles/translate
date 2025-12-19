@@ -86,13 +86,13 @@ Bilgisayarınızda `.github/workflows/` klasörünü oluşturun. İçine `cevirm
 *(Bu kod klasördeki tüm .md dosyalarını bulur ve döngüye sokar)*
 
 ```yaml
-name: AI Translator (Robust)
+name: AI Translator (Badge Style)
 
 on:
   push:
     branches: ["main"]
     paths:
-      - '**.md' # Herhangi bir MD dosyası değişince tetiklenir
+      - '**.md'
 
 permissions:
   contents: write
@@ -111,7 +111,7 @@ jobs:
       - name: Gerekli Kütüphaneler
         run: pip install openai
 
-      - name: Toplu Çeviri Scripti
+      - name: Rozetli Çeviri Scripti
         env:
           GITHUB_TOKEN: ${{ secrets.OPENAI_API_KEY }}
         shell: python
@@ -126,16 +126,9 @@ jobs:
           token = os.environ.get("GITHUB_TOKEN")
           model_name = "gpt-4o"
           
-          # --- KRİTİK DÜZELTME: ASCII İLE ETİKET OLUŞTURMA ---
-          # YAML parser'ın HTML yorumlarını silmesini engellemek için
-          # karakterleri kodla oluşturuyoruz. 
-          # chr(60) = '<', chr(62) = '>'
-          
+          # HTML Etiketlerini ASCII ile oluşturuyoruz (YAML hatasını önlemek için)
           TAG_START = chr(60) + "!-- LANGUAGE_TABLE_START --" + chr(62)
           TAG_END   = chr(60) + "!-- LANGUAGE_TABLE_END --" + chr(62)
-
-          # Debug için yazdıralım (Loglarda görebilirsiniz)
-          print(f"Etiketler oluşturuldu: {TAG_START} ... {TAG_END}")
 
           if not token:
               print("::error::Token bulunamadi! Secret ayarlarini kontrol edin.")
@@ -150,16 +143,38 @@ jobs:
               print("İşlenecek .md dosyası bulunamadı.")
               sys.exit(0)
 
-          print(f"Bulunan dosyalar: {md_files}")
-
           # --- 3. DÖNGÜ BAŞLIYOR ---
           for file_name in md_files:
               print(f"\n--- İşleniyor: {file_name} ---")
 
-              # Link Şablonları
-              header_root = f"{TAG_START}\n[ 🇹🇷 Türkçe ]({file_name}) | [ 🇺🇸 English ](translations/en/{file_name})\n{TAG_END}\n"
+              # --- ROZET (BADGE) TASARIMI ---
+              # Türkçe için Mavi, İngilizce için Gri (veya Pasif) renk seçtik.
+              # Markdown içinde Resim Linki Formatı: [![Alt](ResimURL)](LinkURL)
               
-              header_en = f"{TAG_START}\n[ 🇹🇷 Türkçe ](../../{file_name}) | [ 🇺🇸 English ]({file_name})\n{TAG_END}\n"
+              badge_tr_url = "https://img.shields.io/badge/Lang-Türkçe-0059B3?style=flat&logo=turkey&logoColor=white"
+              badge_en_url = "https://img.shields.io/badge/Lang-English-gray?style=flat&logo=us&logoColor=white"
+
+              # 1. Ana Dizin (Root) Şablonu
+              header_root = f"""{TAG_START}
+          <div align="center">
+            
+            <a href="{file_name}"><img src="{badge_tr_url}" alt="Türkçe"/></a>
+            <a href="translations/en/{file_name}"><img src="{badge_en_url}" alt="English"/></a>
+            
+          </div>
+          {TAG_END}
+          """
+              
+              # 2. İngilizce Dizin (Nested) Şablonu (Link ../../ ile geri döner)
+              header_en = f"""{TAG_START}
+          <div align="center">
+            
+            <a href="../../{file_name}"><img src="{badge_tr_url}" alt="Türkçe"/></a>
+            <a href="{file_name}"><img src="{badge_en_url}" alt="English"/></a>
+            
+          </div>
+          {TAG_END}
+          """
 
               # Dosyayı Oku
               try:
@@ -171,33 +186,25 @@ jobs:
 
               # Ana Dosyaya Link Ekleme
               if TAG_START in content:
-                  # Regex yerine düz değiştirme yapıyoruz, çünkü regex özel karakterlerde hata verebilir
-                  # Basit mantık: Start ve End arasını sil, yenisini koy.
-                  # Ancak regex daha temizdir, sadece değişkenleri escape edelim.
                   pattern = re.escape(TAG_START) + r".*?" + re.escape(TAG_END)
                   content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
               else:
+                  # En tepeye ekle
                   content = header_root.strip() + "\n\n" + content
 
               with open(file_name, "w", encoding="utf-8") as f:
                   f.write(content)
 
-              # --- ÇEVİRİ KISMI (Hata veren yer burasıydı) ---
-              
-              # Split etmeden önce kontrol ediyoruz
+              # --- ÇEVİRİ KISMI ---
               parts = content.split(TAG_END)
-              
               if len(parts) > 1:
                   text_to_translate = parts[-1].strip()
               else:
-                  # Eğer split çalışmazsa (etiket yoksa) tüm içeriği al
                   text_to_translate = content.replace(header_root.strip(), "").strip()
 
               if not text_to_translate:
-                  print(f"UYARI: {file_name} içeriği boş veya sadece linklerden oluşuyor.")
                   continue
 
-              # Yapay Zeka Çağrısı
               try:
                   response = client.chat.completions.create(
                       messages=[
@@ -209,7 +216,6 @@ jobs:
                   )
                   translated_body = response.choices[0].message.content
                   
-                  # İngilizce Kaydetme
                   final_english_content = header_en.strip() + "\n\n" + translated_body
                   
                   os.makedirs("translations/en", exist_ok=True)
@@ -221,7 +227,7 @@ jobs:
                   print(f"✅ {file_name} başarıyla çevrildi.")
 
               except Exception as e:
-                  print(f"::error::{file_name} çevrilirken hata: {e}")
+                  print(f"::error::{file_name} çevirirken hata: {e}")
                   continue
 
       - name: GitHub'a Gönder (Push)
@@ -229,7 +235,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "🤖 Tüm Belgeler Çevrildi (Fix)" || echo "Değişiklik yok"
+          git commit -m "🤖 Rozetli Çeviri Güncellendi" || echo "Değişiklik yok"
           git push
 ```
 
