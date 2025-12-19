@@ -63,7 +63,7 @@ jobs:
               # Türkçe için Mavi, İngilizce için Gri (veya Pasif) renk seçtik.
               # Markdown içinde Resim Linki Formatı: [![Alt](ResimURL)](LinkURL)
               
-              badge_tr_url = "https://img.shields.io/badge/Lang-Türkçe-0059B3?style=flat&logo=turkey&logoColor=white"
+              badge_tr_url = "https://img.shields.io/badge/Dil-Türkçe-0059B3?style=flat&logo=turkey&logoColor=white"
               badge_en_url = "https://img.shields.io/badge/Lang-English-gray?style=flat&logo=us&logoColor=white"
 
               # 1. Ana Dizin (Root) Şablonu
