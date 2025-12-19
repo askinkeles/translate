@@ -23,9 +23,9 @@
 
 ---
 
-This project automatically detects **all Markdown (`.md`) files** (e.g., `README.md`, `CONTRIBUTING.md`, `LICENSE.md`, etc.) in your repository, translates them into English using **GitHub Models (GPT-4o)**, and adds navigation links at the top of each file for cross-language switching.
+This project automatically detects **all Markdown (`.md`) files** (e.g., `README.md`, `CONTRIBUTING.md`, `LICENSE.md`, etc.) in your repository, translates them into English using **GitHub Models (GPT-4o)**, and adds navigation links for language switching at the top of each file.
 
-> **🎯 Purpose:** Write your technical documentation only in Turkish; the system will automatically create and update all other files and their English versions.
+> **🎯 Purpose:** Write your technical documentation in Turkish only; the system will automatically create and update all other files and their English versions.
 
 ---
 
@@ -41,8 +41,8 @@ C -->|Updates| E[🔗 Adds Links];
 
 Here are the critical reasons why we use a **Custom Script** instead of standard translation tools (e.g., `co-op-translator`):
 
-1.  **Token Format:** GitHub Models generate tokens in the `github_pat_` format. Ready-made tools expect the OpenAI `sk-` format, so they won't work.
-2.  **Beta Permission Issue:** GitHub Models is in "Public Beta." If "Only select repositories" is chosen in token settings, AI permissions may be hidden from the menu. The **"All repositories"** setting in this guide solves this issue.
+1.  **Token Format:** GitHub Models generate tokens in the `github_pat_` format. Ready-made tools expect the OpenAI `sk-` format, which causes them to fail.
+2.  **Beta Permission Issue:** GitHub Models are in "Public Beta." If "Only select repositories" is chosen in token settings, AI permissions are hidden from the menu. The **"All repositories"** setting in this guide solves this issue.
 3.  **Smart Linking:** When translation files are moved to a subfolder (`translations/en/`), links back to the main page (`../../FileName.md`) need to be dynamically calculated. This project handles this for each file individually.
 
 ---
@@ -55,22 +55,22 @@ Follow these steps to set up this system.
 
 1.  **Marketplace Access:**
     * Go to [GitHub Marketplace Models](https://github.com/marketplace/models).
-    * If you don't have access, click "Join Waitlist" to register (approval is quick).
+    * If you don’t have access, click "Join Waitlist" to apply (approval is usually quick).
     * If you see the "Playground" button, you have access.
 
 2.  **Start the Project Locally:**
-    If you don't have a repository yet, start on your computer with the following commands:
+    If you don’t have a repository yet, start on your computer with the following commands:
     ```bash
     mkdir my-translator-project
     cd my-translator-project
     echo "# Project Title" > README.md
-    echo "# Contribution Guidelines" > CONTRIBUTING.md
+    echo "# Contributing" > CONTRIBUTING.md
     git init
     git branch -M main
     ```
 
 ### Step 1: Create a Token (Access Key) ⚠️
-This step is critical. Follow the settings **exactly**.
+This step is critical. Follow the instructions **exactly**.
 
 1.  Go to **Settings** > **Developer settings** > **Personal access tokens** > **Fine-grained tokens** in GitHub.
 2.  Click **Generate new token**.
@@ -78,18 +78,18 @@ This step is critical. Follow the settings **exactly**.
 4.  **Expiration:** `90 days`.
 5.  **Repository access:** 🔴 **VERY IMPORTANT!**
     * Be sure to select **"All repositories"**.
-    * *(If you select "Only select repositories," Models permission may not appear).*
+    * *(If you select "Only select repositories," the Models permission may not appear).*
 6.  **Permissions:**
     * Expand **Repository permissions**:
-        * `Contents` -> **Read and write** (To write files).
+        * `Contents` -> **Read and write** (to write files).
     * Expand **Account permissions**:
-        * `Models` -> **Read-only** (To use AI).
+        * `Models` -> **Read-only** (to use AI).
 7.  Click **Generate token** and copy the code.
 
 ### Step 2: Create the Repository on GitHub and Add a Secret
 
 1.  Create a new repository on GitHub.
-2.  Go to your repository's **Settings** > **Secrets and variables** > **Actions**.
+2.  Go to your repository’s **Settings** > **Secrets and variables** > **Actions**.
 3.  Click **New repository secret**.
 4.  **Name:** `OPENAI_API_KEY`
 5.  **Value:** Paste the token you copied and save it.
@@ -98,7 +98,7 @@ This step is critical. Follow the settings **exactly**.
 
 On your computer, create a `.github/workflows/` folder. Inside it, create a file named `cevirmen.yml` and paste the following code.
 
-*(This code finds all `.md` files in the folder and processes them in a loop)*
+*(This code finds all `.md` files in the folder and processes them in a loop.)*
 
 ```yaml
 name: AI Translator (Badge Style)
@@ -141,7 +141,7 @@ jobs:
           token = os.environ.get("GITHUB_TOKEN")
           model_name = "gpt-4o"
           
-          # Create HTML tags with ASCII (to avoid YAML errors)
+          # Create HTML Tags with ASCII (to avoid YAML errors)
           TAG_START = chr(60) + "!-- LANGUAGE_TABLE_START --" + chr(62)
           TAG_END   = chr(60) + "!-- LANGUAGE_TABLE_END --" + chr(62)
 
@@ -204,7 +204,7 @@ jobs:
                   pattern = re.escape(TAG_START) + r".*?" + re.escape(TAG_END)
                   content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
               else:
-                  # Add at the top
+                  # Add to the top
                   content = header_root.strip() + "\n\n" + content
 
               with open(file_name, "w", encoding="utf-8") as f:
@@ -239,7 +239,7 @@ jobs:
                   with open(output_path, "w", encoding="utf-8") as f:
                       f.write(final_english_content)
                       
-                  print(f"✅ Successfully translated {file_name}.")
+                  print(f"✅ {file_name} successfully translated.")
 
               except Exception as e:
                   print(f"::error::Error translating {file_name}: {e}")
@@ -250,7 +250,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "🤖 Updated Translations with Badges" || echo "No changes to commit"
+          git commit -m "🤖 Updated Translations with Badges" || echo "No changes"
           git push
 ```
 
@@ -271,7 +271,7 @@ git push -u origin main
 The system is fully automated.
 
 1.  Edit or create any `.md` file (e.g., `README.md`, `LICENSE.md`, etc.) in your repository.
-2.  Save the changes and push them (`git push`).
+2.  Save and push the changes (`git push`).
 3.  Go to the **Actions** tab in your GitHub repository.
 
 ### What You'll See in the Actions Tab
