@@ -70,7 +70,7 @@ Bilgisayarınızda `.github/workflows/` klasörünü oluşturun. İçine `cevirm
 *(Bu kod klasördeki tüm .md dosyalarını bulur ve döngüye sokar)*
 
 ```yaml
-name: AI Translator (All Files)
+name: AI Translator (Fixed Split)
 
 on:
   push:
@@ -105,10 +105,14 @@ jobs:
           import re
           from openai import OpenAI
 
-          # --- 1. BAĞLANTI AYARLARI ---
+          # --- 1. AYARLAR VE SABİTLER ---
           endpoint = "https://models.github.ai/inference"
           token = os.environ.get("GITHUB_TOKEN")
           model_name = "gpt-4o"
+          
+          # HATA ÇÖZÜMÜ: Etiketleri buraya değişken olarak aldık
+          TAG_START = ""
+          TAG_END = ""
 
           if not token:
               print("::error::Token bulunamadi! Secret ayarlarini kontrol edin.")
@@ -130,19 +134,28 @@ jobs:
           for file_name in md_files:
               print(f"\n--- İşleniyor: {file_name} ---")
 
-              # Link Şablonları (Her dosya için dinamik)
-              header_root = f"""[ 🇹🇷 Türkçe ]({file_name}) | [ 🇺🇸 English ](translations/en/{file_name})
+              # Link Şablonları (Değişkenleri kullanarak)
+              header_root = f"""{TAG_START}
+          [ 🇹🇷 Türkçe ]({file_name}) | [ 🇺🇸 English ](translations/en/{file_name})
+          {TAG_END}
           """
-              header_en = f"""[ 🇹🇷 Türkçe ](../../{file_name}) | [ 🇺🇸 English ]({file_name})
+              header_en = f"""{TAG_START}
+          [ 🇹🇷 Türkçe ](../../{file_name}) | [ 🇺🇸 English ]({file_name})
+          {TAG_END}
           """
 
               # Dosyayı Oku
-              with open(file_name, "r", encoding="utf-8") as f:
-                  content = f.read()
+              try:
+                  with open(file_name, "r", encoding="utf-8") as f:
+                      content = f.read()
+              except Exception as e:
+                  print(f"::error::{file_name} okunamadı: {e}")
+                  continue
 
               # Ana Dosyaya Link Ekleme
-              if "" in content:
-                  pattern = r".*?"
+              if TAG_START in content:
+                  # Regex yerine düz string değişimi daha güvenli olabilir ama pattern koruyoruz
+                  pattern = f"{TAG_START}.*?{TAG_END}"
                   content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
               else:
                   content = header_root.strip() + "\n\n" + content
@@ -150,8 +163,18 @@ jobs:
               with open(file_name, "w", encoding="utf-8") as f:
                   f.write(content)
 
-              # Çeviri Hazırlığı (Linki çıkar)
-              text_to_translate = content.split("")[-1].strip()
+              # Çeviri Hazırlığı (HATA ÇIKAN YER DÜZELTİLDİ)
+              # Artık TAG_END değişkenini kullanıyoruz, string boş gelme şansı yok.
+              if TAG_END in content:
+                  text_to_translate = content.split(TAG_END)[-1].strip()
+              else:
+                  # Eğer tag eklenememişse (imkansız ama güvenlik önlemi) tüm içeriği al
+                  text_to_translate = content
+
+              # Boş içerik kontrolü
+              if not text_to_translate:
+                  print(f"UYARI: {file_name} içinde çevrilecek metin bulunamadı.")
+                  continue
 
               # Yapay Zeka Çağrısı
               try:
@@ -178,7 +201,6 @@ jobs:
 
               except Exception as e:
                   print(f"::error::{file_name} çevrilirken hata: {e}")
-                  # Bir dosya hata verse bile diğerine geçsin diye exit yapmıyoruz
                   continue
 
       - name: GitHub'a Gönder (Push)
