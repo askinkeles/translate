@@ -1,10 +1,10 @@
-name: AI Translator (Final)
+name: AI Translator (Template Logic)
 
 on:
   push:
     branches: ["main"]
     paths:
-      - '**.md' # Sadece md dosyaları değişince çalışır
+      - '**.md'
 
 permissions:
   contents: write
@@ -23,76 +23,90 @@ jobs:
       - name: OpenAI Kütüphanesi
         run: pip install openai
 
-      - name: Çeviri Başlat (Python Script)
+      - name: Akıllı Çeviri ve Linkleme
         env:
-          # Secret'ı alıp ortam değişkenine atıyoruz
           GITHUB_TOKEN: ${{ secrets.OPENAI_API_KEY }}
         shell: python
         run: |
           import os
           import sys
+          import re
           from openai import OpenAI
 
-          print("--- 1. Ayarlar Yükleniyor ---")
-          
-          # SENİN BULDUĞUN RESMİ ADRES:
+          # --- 1. AYARLAR ---
           endpoint = "https://models.github.ai/inference"
           token = os.environ.get("GITHUB_TOKEN")
-          model_name = "gpt-4o"
-
+          
           if not token:
-              print("::error::Token bulunamadi! Secret ayarlarini kontrol et.")
+              print("::error::Token bulunamadi!")
               sys.exit(1)
 
-          print("--- 2. İstemci Başlatılıyor ---")
+          client = OpenAI(base_url=endpoint, api_key=token)
+          file_name = "README.md"
+          
+          if not os.path.exists(file_name):
+              sys.exit(0)
+
+          # --- 2. LİNKLERİ HAZIRLA (Referans aldığınız şablon mantığı) ---
+          
+          # Ana Sayfa (Root) için Link Bloğu:
+          # Burası ana dizin olduğu için yollar düzdür (README.md)
+          header_root = """[ 🇹🇷 Türkçe ](README.md) | [ 🇺🇸 English ](translations/en/README.md)
+          """
+
+          # İngilizce Dosya (Nested) için Link Bloğu:
+          # Burası "translations/en/" içinde olduğu için 2 adım geri çıkmalı (../../)
+          header_en = """[ 🇹🇷 Türkçe ](../../README.md) | [ 🇺🇸 English ](README.md)
+          """
+
+          # --- 3. ANA DOSYAYI GÜNCELLE ---
+          with open(file_name, "r", encoding="utf-8") as f:
+              content = f.read()
+
+          # Eğer etiketler zaten varsa, içini güncelle; yoksa başa ekle.
+          if "" in content:
+              # Mevcut tabloyu Regex ile bul ve bizim standart şablonla değiştir
+              pattern = r".*?"
+              content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
+          else:
+              # Hiç yoksa en tepeye ekle
+              content = header_root.strip() + "\n\n" + content
+
+          # Ana dosyayı (Türkçe) linklerle beraber kaydet
+          with open(file_name, "w", encoding="utf-8") as f:
+              f.write(content)
+
+          # --- 4. ÇEVİRİYE HAZIRLIK ---
+          # Çeviriye gönderirken linkleri ÇIKARIYORUZ. 
+          # Çünkü GPT linkleri bozabilir veya "Turkish" kelimesini çevirebilir.
+          text_to_translate = content.split("")[-1].strip()
+
+          print("Çeviri yapılıyor (GPT-4o)...")
           try:
-              client = OpenAI(
-                  base_url=endpoint,
-                  api_key=token
-              )
-              
-              file_name = "README.md"
-              
-              if not os.path.exists(file_name):
-                  print("README dosyasi yok, islem iptal.")
-                  sys.exit(0)
-
-              # Dosyayı Oku
-              with open(file_name, "r", encoding="utf-8") as f:
-                  content = f.read()
-
-              # Linkleri Ekle (Yoksa)
-              if "" not in content:
-                  print("Linkler ekleniyor...")
-                  header = "\n[ 🇹🇷 Turkish ](README.md) | [ 🇺🇸 English ](translations/en/README.md)\n\n\n"
-                  content = header + content
-                  with open(file_name, "w", encoding="utf-8") as f:
-                      f.write(content)
-
-              print("--- 3. Çeviri Yapılıyor (GitHub Models: gpt-4o) ---")
               response = client.chat.completions.create(
                   messages=[
-                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain, just translate."},
-                      {"role": "user", "content": content}
+                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain. Preserve code blocks exactly."},
+                      {"role": "user", "content": text_to_translate}
                   ],
-                  model=model_name,
-                  temperature=1.0,
-                  max_tokens=4096 
+                  model="gpt-4o",
+                  temperature=0.1
               )
+              translated_body = response.choices[0].message.content
               
-              translated_text = response.choices[0].message.content
+              # --- 5. İNGİLİZCE DOSYAYI OLUŞTUR ---
+              # İşte burası kritik: İngilizce metnin tepesine "header_en" (../../ olan) ekliyoruz.
+              final_english_content = header_en.strip() + "\n\n" + translated_body
               
-              # Kaydet
               os.makedirs("translations/en", exist_ok=True)
               output_path = f"translations/en/{file_name}"
               
               with open(output_path, "w", encoding="utf-8") as f:
-                  f.write(translated_text)
+                  f.write(final_english_content)
                   
-              print(f"--- 4. BAŞARILI! Dosya kaydedildi: {output_path} ---")
+              print(f"BAŞARILI! Linkler ve içerik {output_path} konumuna yazıldı.")
 
           except Exception as e:
-              print(f"::error::Bir hata oluştu: {e}")
+              print(f"::error::Hata: {e}")
               sys.exit(1)
 
       - name: Değişiklikleri Gönder
@@ -100,5 +114,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "🤖 Çeviri Tamamlandı" || echo "Değişiklik yok"
+          git commit -m "🤖 Template Mantığı ile Linkler Düzeltildi" || echo "Değişiklik yok"
           git push
