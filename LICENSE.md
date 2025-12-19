@@ -1,3 +1,7 @@
+<!-- LANGUAGE_TABLE_START -->
+[ 🇹🇷 Türkçe ](LICENSE.md) | [ 🇺🇸 English ](translations/en/LICENSE.md)
+<!-- LANGUAGE_TABLE_END -->
+
 # MIT Lisansı
 
 Telif Hakkı (c) 2024 Aşkın Keleş
