@@ -20,7 +20,9 @@
   [![GitHub stars](https://img.shields.io/github/stars/askinkeles/translate?style=social)](https://github.com/askinkeles/translate/stargazers)
 
 </div>
+
 ---
+
 Bu proje, reponuzdaki **tüm Markdown (`.md`) dosyalarını** (örneğin `README.md`, `CONTRIBUTING.md`, `LICENSE.md` vb.) otomatik olarak algılar, **GitHub Models (GPT-4o)** kullanarak İngilizceye çevirir ve her dosyanın başına diller arası geçiş sağlayan navigasyon linklerini ekler.
 
 > **🎯 Amaç:** Teknik dokümantasyonunuzu sadece Türkçe yazın; sistem diğer tüm dosyaları ve İngilizce versiyonlarını otomatik oluştursun.
@@ -28,6 +30,14 @@ Bu proje, reponuzdaki **tüm Markdown (`.md`) dosyalarını** (örneğin `README
 ---
 
 ## 🏗️ Neden Bu Özel Yöntemi Kullanıyoruz? (Teknik Arkaplan)
+
+```mermaid
+graph LR
+A[📝 Siz Türkçe Yazın] -->|Push| B(🤖 GitHub Actions Tetiklenir);
+B -->|GPT-4o| C{Çeviri İşlemi};
+C -->|Oluşturur| D[🇺🇸 translations/en/Dosya.md];
+C -->|Günceller| E[🔗 Linkleri Ekler];
+```
 
 Standart çeviri araçları (`co-op-translator` vb.) yerine neden **Custom Script** kullandığımızın kritik sebepleri şunlardır:
 
