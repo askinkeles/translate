@@ -23,17 +23,30 @@ jobs:
       - name: Aracı Yükle
         run: pip install co-op-translator
 
+      # --- İŞTE SİHİRLİ DOKUNUŞ BURASI ---
+      # Environment variable yerine, doğrudan .env dosyası oluşturuyoruz.
+      - name: .env Dosyası Oluşturuluyor
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "OPENAI_BASE_URL=https://models.inference.ai.azure.com" >> .env
+          echo "OPENAI_MODEL=gpt-4o" >> .env
+          echo "Dosya oluşturuldu. Anahtar kontrol ediliyor..."
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "::error::DİKKAT! Secret BOŞ geliyor. Ayarlarda sorun var!"
+            exit 1
+          else
+            echo "Anahtar mevcut. İşlem devam ediyor."
+          fi
+
       - name: Çeviriyi Başlat
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_BASE_URL: 'https://models.inference.ai.azure.com'
-          OPENAI_MODEL: 'gpt-4o'
+        # Artık env: kısmına ihtiyacımız yok, çünkü .env dosyası var.
         run: translate -l "en"
 
       - name: Kaydet ve Gönder
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          rm .env # Güvenlik için iş bitince dosyayı siliyoruz
           git add .
           git commit -m "🤖 Linkler ve Ceviri Eklendi" || exit 0
           git push
