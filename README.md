@@ -110,3 +110,4 @@ Bu projeyi geliştirirken edindiğimiz kritik tecrübeler:
 2.  Dosyanın en tepesine `` ve `` etiketlerini eklemeyi unutmayın.
 3.  `Commit` ve `Push` yapın.
 4.  İşlem bitince linkler otomatik eklenecektir.
+   
