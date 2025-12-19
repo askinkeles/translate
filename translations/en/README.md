@@ -3,10 +3,22 @@
 <!-- LANGUAGE_TABLE_END -->
 
 # 🌍 Automatic Document Translator with GitHub Models (All-in-One Translator)
+<div align="center">
 
-This project automatically detects **all Markdown (`.md`) files** in your repository (e.g., `README.md`, `CONTRIBUTING.md`, `LICENSE.md`, etc.), translates them into English using **GitHub Models (GPT-4o)**, and adds navigation links at the top of each file for seamless language switching.
+  [![AI Translator](https://github.com/askinkeles/translate/actions/workflows/cevirmen.yml/badge.svg)](https://github.com/askinkeles/translate/actions/workflows/cevirmen.yml)
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
-> **🎯 Goal:** Write your technical documentation only in Turkish; the system will automatically generate all other files and their English versions.
+  ![Visitors](https://visitor-badge.laobi.icu/badge?page_id=askinkeles.translate)
+
+  [![GitHub forks](https://img.shields.io/github/forks/askinkeles/translate?style=social)](https://github.com/askinkeles/translate/network)
+  [![GitHub stars](https://img.shields.io/github/stars/askinkeles/translate?style=social)](https://github.com/askinkeles/translate/stargazers)
+
+</div>
+---
+This project automatically detects **all Markdown (`.md`) files** (e.g., `README.md`, `CONTRIBUTING.md`, `LICENSE.md`, etc.) in your repository, translates them into English using **GitHub Models (GPT-4o)**, and adds navigation links for language switching at the top of each file.
+
+> **🎯 Purpose:** Write your technical documentation only in Turkish; the system will automatically create all other files and their English versions.
 
 ---
 
@@ -14,21 +26,21 @@ This project automatically detects **all Markdown (`.md`) files** in your reposi
 
 Here are the critical reasons why we use a **Custom Script** instead of standard translation tools (e.g., `co-op-translator`):
 
-1.  **Token Format:** GitHub Models generate tokens in the `github_pat_` format. Off-the-shelf tools expect OpenAI's `sk-` format, which causes compatibility issues.
-2.  **Beta Permission Issue:** GitHub Models are in "Public Beta." If "Only select repositories" is chosen in token settings, AI permissions may disappear from the menu. The **"All repositories"** setting in this guide resolves this issue.
-3.  **Smart Linking:** When translation files are moved to a subfolder (`translations/en/`), links back to the main page (e.g., `../../FileName.md`) need to be dynamically calculated. This project handles this for each file individually.
+1.  **Token Format:** GitHub Models generates tokens in the `github_pat_` format. Ready-made tools expect the OpenAI `sk-` format, so they don't work.
+2.  **Beta Permission Issue:** GitHub Models is in "Public Beta." If "Only select repositories" is chosen in token settings, AI permissions are hidden from the menu. The **"All repositories"** setting in this guide solves this issue.
+3.  **Smart Linking:** When translation files are moved to a subfolder (`translations/en/`), links returning to the main page (`../../FileName.md`) need to be dynamically calculated. This project handles this for each file individually.
 
 ---
 
-## 🚀 Installation Guide (Step-by-Step from Scratch)
+## 🚀 Installation Guide (Step-by-Step)
 
-Follow these steps to set up the system.
+Follow these steps to set up this system.
 
 ### Step 0: Preparation (Marketplace and Local Setup)
 
 1.  **Marketplace Access:**
     * Go to [GitHub Marketplace Models](https://github.com/marketplace/models).
-    * If you don't have access, click "Join Waitlist" to sign up (approval is quick).
+    * If you don't have access, click "Join Waitlist" to register (approval is quick).
     * If you see the "Playground" button, you have access.
 
 2.  **Start the Project Locally:**
@@ -37,7 +49,7 @@ Follow these steps to set up the system.
     mkdir my-translator-project
     cd my-translator-project
     echo "# Project Title" > README.md
-    echo "# Contributing" > CONTRIBUTING.md
+    echo "# Contribution Guidelines" > CONTRIBUTING.md
     git init
     git branch -M main
     ```
@@ -45,31 +57,31 @@ Follow these steps to set up the system.
 ### Step 1: Create a Token (Access Key) ⚠️
 This step is critical. Follow the settings **exactly**.
 
-1.  Go to **Settings** > **Developer settings** > **Personal access tokens** > **Fine-grained tokens** on GitHub.
-2.  Click **Generate new token**.
+1.  Go to **Settings** > **Developer settings** > **Personal access tokens** > **Fine-grained tokens** in GitHub.
+2.  Click the **Generate new token** button.
 3.  **Token Name:** `Translator-Token`.
 4.  **Expiration:** `90 days`.
 5.  **Repository access:** 🔴 **VERY IMPORTANT!**
-    * Select **"All repositories"**.
-    * *(If you select "Only select repositories," Models permissions may not appear).*
+    * Be sure to select **"All repositories"**.
+    * *(If you select "Only select repositories," the Models permission may not appear).*
 6.  **Permissions:**
     * Expand the **Repository permissions** section:
         * `Contents` -> **Read and write** (To write files).
     * Expand the **Account permissions** section:
         * `Models` -> **Read-only** (To use AI).
-7.  Click **Generate token** and copy the code.
+7.  Click the **Generate token** button and copy the code.
 
 ### Step 2: Create the Repository on GitHub and Add a Secret
 
 1.  Create a new repository on GitHub.
-2.  Go to your repository's **Settings** > **Secrets and variables** > **Actions**.
-3.  Click **New repository secret**.
+2.  Go to your repository's **Settings** > **Secrets and variables** > **Actions** page.
+3.  Click the **New repository secret** button.
 4.  **Name:** `OPENAI_API_KEY`
 5.  **Value:** Paste the token you copied and save it.
 
 ### Step 3: Create the Workflow File
 
-On your computer, create a `.github/workflows/` folder. Inside it, create a file named `translator.yml` and paste the following code.
+On your computer, create a `.github/workflows/` folder. Inside it, create a file named `cevirmen.yml` and paste the following code.
 
 *(This code finds all `.md` files in the folder and processes them in a loop)*
 
@@ -114,7 +126,7 @@ jobs:
           token = os.environ.get("GITHUB_TOKEN")
           model_name = "gpt-4o"
           
-          # --- CRITICAL FIX: CREATE TAGS USING ASCII ---
+          # --- CRITICAL FIX: CREATE TAGS WITH ASCII ---
           # Prevent YAML parser from removing HTML comments
           # by creating characters with code.
           # chr(60) = '<', chr(62) = '>'
@@ -138,7 +150,7 @@ jobs:
               print("No .md files found to process.")
               sys.exit(0)
 
-          print(f"Found files: {md_files}")
+          print(f"Files found: {md_files}")
 
           # --- 3. START LOOP ---
           for file_name in md_files:
@@ -154,12 +166,14 @@ jobs:
                   with open(file_name, "r", encoding="utf-8") as f:
                       content = f.read()
               except Exception as e:
-                  print(f"::error::Could not read {file_name}: {e}")
+                  print(f"::error::{file_name} could not be read: {e}")
                   continue
 
-              # Add Links to Main File
+              # Add Link to Main File
               if TAG_START in content:
-                  # Replace instead of regex for simplicity
+                  # Instead of regex, use simple replacement to avoid errors with special characters
+                  # Simple logic: Remove between Start and End, then add new content.
+                  # However, regex is cleaner; just escape variables.
                   pattern = re.escape(TAG_START) + r".*?" + re.escape(TAG_END)
                   content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
               else:
@@ -168,7 +182,7 @@ jobs:
               with open(file_name, "w", encoding="utf-8") as f:
                   f.write(content)
 
-              # --- TRANSLATION PART ---
+              # --- TRANSLATION PART (This was the error-prone section) ---
               
               # Check before splitting
               parts = content.split(TAG_END)
@@ -195,7 +209,7 @@ jobs:
                   )
                   translated_body = response.choices[0].message.content
                   
-                  # Save English Version
+                  # Save English Translation
                   final_english_content = header_en.strip() + "\n\n" + translated_body
                   
                   os.makedirs("translations/en", exist_ok=True)
@@ -207,7 +221,7 @@ jobs:
                   print(f"✅ {file_name} successfully translated.")
 
               except Exception as e:
-                  print(f"::error::Error translating {file_name}: {e}")
+                  print(f"::error::{file_name} encountered an error during translation: {e}")
                   continue
 
       - name: Push to GitHub
@@ -221,11 +235,11 @@ jobs:
 
 ### Step 4: Publish
 
-Push your files to GitHub using the VS Code terminal:
+Push your files to GitHub from the VS Code terminal:
 
 ```bash
 git add .
-git commit -m "System setup complete"
+git commit -m "System setup completed"
 git push -u origin main
 ```
 
@@ -236,23 +250,23 @@ git push -u origin main
 The system is fully automated.
 
 1.  Edit or create any `.md` file (e.g., `README.md`, `LICENSE.md`, etc.) in your repository.
-2.  Save the changes and push them (`git push`).
+2.  Save and push the changes (`git push`).
 3.  Go to the **Actions** tab in your GitHub repository.
 
 ### What You'll See in the Actions Tab
 1.  **Yellow Circle:** The process has started.
-2.  **Logs:** When you click on the process, you'll see a list like `Found files: ['README.md', 'CONTRIBUTING.md']`. The script will process them one by one.
-3.  **Green Checkmark (✅):** Once completed, links will appear at the top of your main files, and English versions will be created in the `translations/en/` folder.
+2.  **Logs:** When you click on the process, you'll see a list like `Files found: ['README.md', 'CONTRIBUTING.md']`. The script processes them one by one.
+3.  **Green Checkmark (✅):** Once completed, links will appear at the top of your files in the main directory, and English versions will be created in the `translations/en/` folder.
 
 ---
 
 ## ❓ Frequently Asked Questions (FAQ)
 
 **Q: Can I manually edit the English translation?**  
-A: No. The `translations` folder will be **automatically overwritten** during each run. You should make edits in the main Turkish file.
+A: No. The `translations` folder is **automatically overwritten** during each run. You should make edits in the main Turkish file.
 
 **Q: What happens if I add a new file?**  
-A: For example, if you add `NEW_DOCUMENT.md`, the system will automatically detect it in the next run, add links, and create its English translation in `translations/en/NEW_DOCUMENT.md`.
+A: For example, if you add `NEW_DOCUMENT.md`, the system will automatically detect it in the next run, add links, and create its translation as `translations/en/NEW_DOCUMENT.md`.
 
 **Q: Why is there no `.env` file?**  
 A: Storing API keys in code is insecure. GitHub Secrets creates a virtual environment variable during runtime to ensure security.
