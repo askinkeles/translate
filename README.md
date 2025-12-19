@@ -222,6 +222,7 @@ Sistem tamamen otomatiktir.
 **S: İngilizce çeviriyi elle düzeltebilir miyim?**
 C: Hayır. `translations` klasörü her çalışmada **otomatik olarak üzerine yazılır**. Düzeltmeleri Türkçe ana dosyada yapmalısınız.
 
+
 **S: Yeni bir dosya eklersem ne olur?**
 C: Örneğin `YENI_BELGE.md` eklerseniz, sistem bir sonraki çalışmada onu otomatik algılar, link ekler ve `translations/en/YENI_BELGE.md` olarak çevirisini oluşturur.
 
