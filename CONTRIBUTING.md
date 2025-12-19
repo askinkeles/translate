@@ -1,3 +1,7 @@
+<!-- LANGUAGE_TABLE_START -->
+[ 🇹🇷 Türkçe ](CONTRIBUTING.md) | [ 🇺🇸 English ](translations/en/CONTRIBUTING.md)
+<!-- LANGUAGE_TABLE_END -->
+
 # Katkıda Bulunma Rehberi
 
 Projeye katkıda bulunmak istediğiniz için teşekkürler! 🎉
