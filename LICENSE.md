@@ -1,5 +1,10 @@
 <!-- LANGUAGE_TABLE_START -->
-[ 🇹🇷 Türkçe ](LICENSE.md) | [ 🇺🇸 English ](translations/en/LICENSE.md)
+<div align="center">
+  
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/Lang-Türkçe-0059B3?style=flat&logo=turkey&logoColor=white" alt="Türkçe"/></a>
+  <a href="translations/en/LICENSE.md"><img src="https://img.shields.io/badge/Lang-English-gray?style=flat&logo=us&logoColor=white" alt="English"/></a>
+  
+</div>
 <!-- LANGUAGE_TABLE_END -->
 
 # MIT Lisansı

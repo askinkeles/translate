@@ -1,5 +1,10 @@
 <!-- LANGUAGE_TABLE_START -->
-[ 🇹🇷 Türkçe ](README.md) | [ 🇺🇸 English ](translations/en/README.md)
+<div align="center">
+  
+  <a href="README.md"><img src="https://img.shields.io/badge/Lang-Türkçe-0059B3?style=flat&logo=turkey&logoColor=white" alt="Türkçe"/></a>
+  <a href="translations/en/README.md"><img src="https://img.shields.io/badge/Lang-English-gray?style=flat&logo=us&logoColor=white" alt="English"/></a>
+  
+</div>
 <!-- LANGUAGE_TABLE_END -->
 
 # 🌍 GitHub Models ile Otomatik Doküman Çevirmeni (All-in-One Translator)
