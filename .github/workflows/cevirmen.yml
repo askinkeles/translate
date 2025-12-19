@@ -1,10 +1,10 @@
-name: AI Translator (Template Logic)
+name: AI Translator (All Files)
 
 on:
   push:
     branches: ["main"]
     paths:
-      - '**.md'
+      - '**.md' # Herhangi bir MD dosyası değişince tetiklenir
 
 permissions:
   contents: write
@@ -20,10 +20,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: OpenAI Kütüphanesi
+      - name: Gerekli Kütüphaneler
         run: pip install openai
 
-      - name: Akıllı Çeviri ve Linkleme
+      - name: Toplu Çeviri Scripti
         env:
           GITHUB_TOKEN: ${{ secrets.OPENAI_API_KEY }}
         shell: python
@@ -33,86 +33,86 @@ jobs:
           import re
           from openai import OpenAI
 
-          # --- 1. AYARLAR ---
+          # --- 1. BAĞLANTI AYARLARI ---
           endpoint = "https://models.github.ai/inference"
           token = os.environ.get("GITHUB_TOKEN")
-          
+          model_name = "gpt-4o"
+
           if not token:
-              print("::error::Token bulunamadi!")
+              print("::error::Token bulunamadi! Secret ayarlarini kontrol edin.")
               sys.exit(1)
 
           client = OpenAI(base_url=endpoint, api_key=token)
-          file_name = "README.md"
-          
-          if not os.path.exists(file_name):
+
+          # --- 2. DOSYALARI BULMA ---
+          # Kök dizindeki tüm .md dosyalarını al (translations klasörü hariç)
+          md_files = [f for f in os.listdir('.') if f.endswith('.md') and os.path.isfile(f)]
+
+          if not md_files:
+              print("İşlenecek .md dosyası bulunamadı.")
               sys.exit(0)
 
-          # --- 2. LİNKLERİ HAZIRLA (Referans aldığınız şablon mantığı) ---
-          
-          # Ana Sayfa (Root) için Link Bloğu:
-          # Burası ana dizin olduğu için yollar düzdür (README.md)
-          header_root = """[ 🇹🇷 Türkçe ](README.md) | [ 🇺🇸 English ](translations/en/README.md)
+          print(f"Bulunan dosyalar: {md_files}")
+
+          # --- 3. DÖNGÜ BAŞLIYOR ---
+          for file_name in md_files:
+              print(f"\n--- İşleniyor: {file_name} ---")
+
+              # Link Şablonları (Her dosya için dinamik)
+              header_root = f"""[ 🇹🇷 Türkçe ]({file_name}) | [ 🇺🇸 English ](translations/en/{file_name})
+          """
+              header_en = f"""[ 🇹🇷 Türkçe ](../../{file_name}) | [ 🇺🇸 English ]({file_name})
           """
 
-          # İngilizce Dosya (Nested) için Link Bloğu:
-          # Burası "translations/en/" içinde olduğu için 2 adım geri çıkmalı (../../)
-          header_en = """[ 🇹🇷 Türkçe ](../../README.md) | [ 🇺🇸 English ](README.md)
-          """
+              # Dosyayı Oku
+              with open(file_name, "r", encoding="utf-8") as f:
+                  content = f.read()
 
-          # --- 3. ANA DOSYAYI GÜNCELLE ---
-          with open(file_name, "r", encoding="utf-8") as f:
-              content = f.read()
+              # Ana Dosyaya Link Ekleme
+              if "" in content:
+                  pattern = r".*?"
+                  content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
+              else:
+                  content = header_root.strip() + "\n\n" + content
 
-          # Eğer etiketler zaten varsa, içini güncelle; yoksa başa ekle.
-          if "" in content:
-              # Mevcut tabloyu Regex ile bul ve bizim standart şablonla değiştir
-              pattern = r".*?"
-              content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
-          else:
-              # Hiç yoksa en tepeye ekle
-              content = header_root.strip() + "\n\n" + content
+              with open(file_name, "w", encoding="utf-8") as f:
+                  f.write(content)
 
-          # Ana dosyayı (Türkçe) linklerle beraber kaydet
-          with open(file_name, "w", encoding="utf-8") as f:
-              f.write(content)
+              # Çeviri Hazırlığı (Linki çıkar)
+              text_to_translate = content.split("")[-1].strip()
 
-          # --- 4. ÇEVİRİYE HAZIRLIK ---
-          # Çeviriye gönderirken linkleri ÇIKARIYORUZ. 
-          # Çünkü GPT linkleri bozabilir veya "Turkish" kelimesini çevirebilir.
-          text_to_translate = content.split("")[-1].strip()
-
-          print("Çeviri yapılıyor (GPT-4o)...")
-          try:
-              response = client.chat.completions.create(
-                  messages=[
-                      {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain. Preserve code blocks exactly."},
-                      {"role": "user", "content": text_to_translate}
-                  ],
-                  model="gpt-4o",
-                  temperature=0.1
-              )
-              translated_body = response.choices[0].message.content
-              
-              # --- 5. İNGİLİZCE DOSYAYI OLUŞTUR ---
-              # İşte burası kritik: İngilizce metnin tepesine "header_en" (../../ olan) ekliyoruz.
-              final_english_content = header_en.strip() + "\n\n" + translated_body
-              
-              os.makedirs("translations/en", exist_ok=True)
-              output_path = f"translations/en/{file_name}"
-              
-              with open(output_path, "w", encoding="utf-8") as f:
-                  f.write(final_english_content)
+              # Yapay Zeka Çağrısı
+              try:
+                  response = client.chat.completions.create(
+                      messages=[
+                          {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain. Preserve code blocks exactly."},
+                          {"role": "user", "content": text_to_translate}
+                      ],
+                      model=model_name,
+                      temperature=0.1
+                  )
+                  translated_body = response.choices[0].message.content
                   
-              print(f"BAŞARILI! Linkler ve içerik {output_path} konumuna yazıldı.")
+                  # İngilizce Kaydetme
+                  final_english_content = header_en.strip() + "\n\n" + translated_body
+                  
+                  os.makedirs("translations/en", exist_ok=True)
+                  output_path = f"translations/en/{file_name}"
+                  
+                  with open(output_path, "w", encoding="utf-8") as f:
+                      f.write(final_english_content)
+                      
+                  print(f"✅ {file_name} başarıyla çevrildi.")
 
-          except Exception as e:
-              print(f"::error::Hata: {e}")
-              sys.exit(1)
+              except Exception as e:
+                  print(f"::error::{file_name} çevrilirken hata: {e}")
+                  # Bir dosya hata verse bile diğerine geçsin diye exit yapmıyoruz
+                  continue
 
-      - name: Değişiklikleri Gönder
+      - name: GitHub'a Gönder (Push)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "🤖 Template Mantığı ile Linkler Düzeltildi" || echo "Değişiklik yok"
+          git commit -m "🤖 Tüm Belgeler Çevrildi" || echo "Değişiklik yok"
           git push
