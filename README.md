@@ -1,57 +1,85 @@
-# 🌍 GitHub Models ile Otomatik Markdown Çevirmeni
+# 🌍 GitHub Models ile Otomatik Doküman Çevirmeni (All-in-One Translator)
 
-Bu proje, GitHub üzerindeki Markdown (`.md`) dosyalarını **GitHub Models (GPT-4o)** kullanarak otomatik olarak İngilizceye (veya diğer dillere) çeviren bir otomasyon sistemidir.
+Bu proje, reponuzdaki **tüm Markdown (`.md`) dosyalarını** (örneğin `README.md`, `CONTRIBUTING.md`, `LICENSE.md` vb.) otomatik olarak algılar, **GitHub Models (GPT-4o)** kullanarak İngilizceye çevirir ve her dosyanın başına diller arası geçiş sağlayan navigasyon linklerini ekler.
 
-Bu rehber; lokal kurulumdaki `PATH` ve `Permission` sorunlarıyla boğuşmadan, işlemlerin **tamamen GitHub sunucularında (Cloud)** nasıl güvenli ve ücretsiz bir şekilde yapılacağını anlatır.
-
----
-
-## 🚀 Nasıl Çalışır?
-
-1.  Siz Türkçe bir `.md` dosyası yazar ve GitHub'a yüklersiniz (`git push`).
-2.  GitHub Actions devreye girer.
-3.  Microsoft Azure üzerindeki **GPT-4o** modeline bağlanır.
-4.  Dosyanızı çevirir ve `translations/` klasörü altına otomatik olarak kaydeder.
-5.  Dosyanın en başına otomatik olarak dil seçeneklerini (Linkleri) ekler.
+> **🎯 Amaç:** Teknik dokümantasyonunuzu sadece Türkçe yazın; sistem diğer tüm dosyaları ve İngilizce versiyonlarını otomatik oluştursun.
 
 ---
 
-## 🛠️ Kurulum (Adım Adım)
+## 🏗️ Neden Bu Özel Yöntemi Kullanıyoruz? (Teknik Arkaplan)
 
-### 1. Token (Anahtar) Alma
-Sistemin çalışması için GitHub Models'e erişim izni gerekir.
+Standart çeviri araçları (`co-op-translator` vb.) yerine neden **Custom Script** kullandığımızın kritik sebepleri şunlardır:
 
-1.  [GitHub Marketplace - Models](https://github.com/marketplace/models) sayfasına gidin (Veya Settings > Developer Settings).
-2.  **Personal Access Token (Tokens - classic veya Fine-grained)** oluşturun.
-3.  Token'ı kopyalayın (`github_pat_...` ile başlar).
-    * ⚠️ **ÖNEMLİ UYARI:** Bu token'ı asla kodların içine, `.env` dosyasına veya `README` dosyasına yapıştırıp GitHub'a yüklemeyin. GitHub güvenlik sistemi (Push Protection) bunu engeller veya token'ı iptal eder.
+1.  **Token Formatı:** GitHub Models, `github_pat_` formatında token üretir. Hazır araçlar ise OpenAI `sk-` formatı beklediği için çalışmaz.
+2.  **Beta İzin Sorunu:** GitHub Models "Public Beta" sürecindedir. Token ayarlarında "Only select repositories" seçilirse, yapay zeka izinleri menüden gizlenmektedir. Bu rehberdeki **"All repositories"** ayarı bu sorunu çözer.
+3.  **Akıllı Linkleme:** Çeviri dosyaları alt klasöre (`translations/en/`) taşındığında, ana sayfaya dönen linklerin (`../../DosyaAdi.md`) dinamik olarak hesaplanması gerekir. Bu proje bunu her dosya için ayrı ayrı yapar.
 
-### 2. Token'ı GitHub'a Tanımlama (Secret)
-Anahtarı güvenli kasaya koymalıyız.
+---
 
-1.  Bu reponun **Settings** sekmesine gidin.
-2.  Sol menüden **Secrets and variables** > **Actions** kısmına tıklayın.
+## 🚀 Kurulum Rehberi (Sıfırdan Adım Adım)
+
+Bu sistemi kurmak için aşağıdaki adımları sırasıyla uygulayın.
+
+### Adım 0: Ön Hazırlık (Marketplace ve Lokal Kurulum)
+
+1.  **Marketplace Erişimi:**
+    * [GitHub Marketplace Models](https://github.com/marketplace/models) sayfasına gidin.
+    * Erişiminiz yoksa "Join Waitlist" diyerek kaydolun (Hızlı onaylanır).
+    * "Playground" butonunu görüyorsanız erişiminiz var demektir.
+
+2.  **Lokalde Projeyi Başlatma:**
+    Henüz bir reponuz yoksa bilgisayarınızda şu komutlarla başlayın:
+    ```bash
+    mkdir my-translator-project
+    cd my-translator-project
+    echo "# Proje Başlığı" > README.md
+    echo "# Katkıda Bulunma" > CONTRIBUTING.md
+    git init
+    git branch -M main
+    ```
+
+### Adım 1: Token (Erişim Anahtarı) Oluşturma ⚠️
+Bu adım en kritik kısımdır. Ayarları **birebir** uygulayın.
+
+1.  GitHub'da **Settings** > **Developer settings** > **Personal access tokens** > **Fine-grained tokens** sayfasına gidin.
+2.  **Generate new token** butonuna basın.
+3.  **Token Name:** `Translator-Token`.
+4.  **Expiration:** `90 days`.
+5.  **Repository access:** 🔴 **ÇOK ÖNEMLİ!**
+    * Mutlaka **"All repositories"** seçeneğini seçin.
+    * *("Only select repositories" seçerseniz Models izni görünmeyebilir).*
+6.  **Permissions (İzinler):**
+    * **Repository permissions** başlığını genişletin:
+        * `Contents` -> **Read and write** (Dosya yazmak için).
+    * **Account permissions** başlığını genişletin:
+        * `Models` -> **Read-only** (Yapay zekayı kullanmak için).
+7.  **Generate token** butonuna basın ve kodu kopyalayın.
+
+### Adım 2: Repoyu GitHub'da Oluşturma ve Secret Ekleme
+
+1.  GitHub'da yeni bir repository oluşturun.
+2.  Reponuzun **Settings** > **Secrets and variables** > **Actions** sayfasına gidin.
 3.  **New repository secret** butonuna basın.
-    * **Name:** `OPENAI_API_KEY`
-    * **Secret:** `(Kopyaladığınız github_pat_... kodunu buraya yapıştırın)`
-4.  **Add secret** diyerek kaydedin.
+4.  **Name:** `OPENAI_API_KEY`
+5.  **Value:** Kopyaladığınız token'ı yapıştırın ve kaydedin.
 
-### 3. Otomasyon Dosyasını Oluşturma
-Reponuzda şu klasör yolunu oluşturun: `.github/workflows/`
+### Adım 3: Workflow Dosyasını Oluşturma
 
-Bu klasörün içine `cevirmen.yml` adında bir dosya açın ve şu kodları yapıştırın:
+Bilgisayarınızda `.github/workflows/` klasörünü oluşturun. İçine `cevirmen.yml` adında bir dosya açın ve aşağıdaki kodu yapıştırın.
+
+*(Bu kod klasördeki tüm .md dosyalarını bulur ve döngüye sokar)*
 
 ```yaml
-name: AI Translator
+name: AI Translator (All Files)
 
 on:
   push:
-    branches: [ "main" ] # Ana dalınızın adı
+    branches: ["main"]
     paths:
-      - '**.md' # Sadece yazı dosyaları değişince çalışır
+      - '**.md' # Herhangi bir MD dosyası değişince tetiklenir
 
 permissions:
-  contents: write # Repoya dosya ekleyebilmesi için gerekli izin
+  contents: write
 
 jobs:
   translate:
@@ -64,50 +92,138 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Aracı Yükle
-        run: pip install co-op-translator
+      - name: Gerekli Kütüphaneler
+        run: pip install openai
 
-      - name: Çeviriyi Başlat
+      - name: Toplu Çeviri Scripti
         env:
-          # Secret olarak kaydettiğimiz anahtarı buradan çekiyoruz
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_BASE_URL: '[https://models.inference.ai.azure.com](https://models.inference.ai.azure.com)'
-          OPENAI_MODEL: 'gpt-4o'
-        # Hedef dilleri buraya ekleyebilirsiniz (Örn: -l "en de fr")
-        run: translate -l "en"
+          GITHUB_TOKEN: ${{ secrets.OPENAI_API_KEY }}
+        shell: python
+        run: |
+          import os
+          import sys
+          import re
+          from openai import OpenAI
 
-      - name: Kaydet ve Gönder
+          # --- 1. BAĞLANTI AYARLARI ---
+          endpoint = "https://models.github.ai/inference"
+          token = os.environ.get("GITHUB_TOKEN")
+          model_name = "gpt-4o"
+
+          if not token:
+              print("::error::Token bulunamadi! Secret ayarlarini kontrol edin.")
+              sys.exit(1)
+
+          client = OpenAI(base_url=endpoint, api_key=token)
+
+          # --- 2. DOSYALARI BULMA ---
+          # Kök dizindeki tüm .md dosyalarını al (translations klasörü hariç)
+          md_files = [f for f in os.listdir('.') if f.endswith('.md') and os.path.isfile(f)]
+
+          if not md_files:
+              print("İşlenecek .md dosyası bulunamadı.")
+              sys.exit(0)
+
+          print(f"Bulunan dosyalar: {md_files}")
+
+          # --- 3. DÖNGÜ BAŞLIYOR ---
+          for file_name in md_files:
+              print(f"\n--- İşleniyor: {file_name} ---")
+
+              # Link Şablonları (Her dosya için dinamik)
+              header_root = f"""[ 🇹🇷 Türkçe ]({file_name}) | [ 🇺🇸 English ](translations/en/{file_name})
+          """
+              header_en = f"""[ 🇹🇷 Türkçe ](../../{file_name}) | [ 🇺🇸 English ]({file_name})
+          """
+
+              # Dosyayı Oku
+              with open(file_name, "r", encoding="utf-8") as f:
+                  content = f.read()
+
+              # Ana Dosyaya Link Ekleme
+              if "" in content:
+                  pattern = r".*?"
+                  content = re.sub(pattern, header_root.strip(), content, flags=re.DOTALL)
+              else:
+                  content = header_root.strip() + "\n\n" + content
+
+              with open(file_name, "w", encoding="utf-8") as f:
+                  f.write(content)
+
+              # Çeviri Hazırlığı (Linki çıkar)
+              text_to_translate = content.split("")[-1].strip()
+
+              # Yapay Zeka Çağrısı
+              try:
+                  response = client.chat.completions.create(
+                      messages=[
+                          {"role": "system", "content": "You are a professional technical translator. Translate the markdown content to English. Do not explain. Preserve code blocks exactly."},
+                          {"role": "user", "content": text_to_translate}
+                      ],
+                      model=model_name,
+                      temperature=0.1
+                  )
+                  translated_body = response.choices[0].message.content
+                  
+                  # İngilizce Kaydetme
+                  final_english_content = header_en.strip() + "\n\n" + translated_body
+                  
+                  os.makedirs("translations/en", exist_ok=True)
+                  output_path = f"translations/en/{file_name}"
+                  
+                  with open(output_path, "w", encoding="utf-8") as f:
+                      f.write(final_english_content)
+                      
+                  print(f"✅ {file_name} başarıyla çevrildi.")
+
+              except Exception as e:
+                  print(f"::error::{file_name} çevrilirken hata: {e}")
+                  # Bir dosya hata verse bile diğerine geçsin diye exit yapmıyoruz
+                  continue
+
+      - name: GitHub'a Gönder (Push)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "🤖 Çeviri tamamlandı" || exit 0
+          git commit -m "🤖 Tüm Belgeler Çevrildi" || echo "Değişiklik yok"
           git push
+```
+
+### Adım 4: Yayınlama (Publish)
+
+VS Code terminalinden dosyalarınızı GitHub'a gönderin:
+
+```bash
+git add .
+git commit -m "Sistem kurulumu tamamlandi"
+git push -u origin main
 ```
 
 ---
 
-## 💡 Tecrübe Notları (Neden Böyle Yaptık?)
+## 🚦 Nasıl Kullanılır ve Test Edilir?
 
-Bu projeyi geliştirirken edindiğimiz kritik tecrübeler:
+Sistem tamamen otomatiktir.
 
-1.  **Lokal vs. Cloud:**
-    * ❌ **Lokal (Bilgisayarda) Kurulum:** Windows ortamında Python `PATH` ayarları, yönetici izinleri ve dosya okuma (path) sorunları çok fazla zaman kaybettirebiliyor. Ayrıca `.env` dosyası oluşturmak ve bunu yanlışlıkla GitHub'a göndermek büyük güvenlik riski oluşturuyor.
-    * ✅ **GitHub Actions (Cloud):** Sanal bir Linux makinesi her seferinde sıfırdan kurulur, işini yapar ve kapanır. `PATH` sorunu yoktur, izin sorunu yoktur. En temiz ve stabil yöntem budur.
+1.  Reponuzda herhangi bir `.md` dosyasını (`README.md`, `LICENSE.md` vb.) düzenleyin veya yeni bir markdown dosyası oluşturun.
+2.  Değişikliği kaydedip gönderin (`git push`).
+3.  GitHub reponuzda **Actions** sekmesine tıklayın.
 
-2.  **Güvenlik (Secret Scanning):**
-    * `.env` dosyasını `.gitignore` dosyasına eklemeden asla `git push` yapmayın.
-    * Eğer yanlışlıkla şifreyi push ederseniz, GitHub bunu yakalar ve yüklemenize izin vermez (Push Protection). Bu durumda en temiz yol, repoyu silip sıfırdan başlamak veya git geçmişini (history) temizlemektir.
-
-3.  **Model Seçimi:**
-    * Bu proje, standart OpenAI API yerine **GitHub Models (Azure)** altyapısını kullanır. Bu sayede GitHub kullanıcıları belirli limitler dahilinde GPT-4o modelini ücretsiz deneyimleyebilir.
+### Actions Ekranında Görecekleriniz
+1.  **Sarı Daire:** İşlem başladı.
+2.  **Logs:** İşleme tıkladığınızda `Bulunan dosyalar: ['README.md', 'CONTRIBUTING.md']` gibi bir liste göreceksiniz. Script hepsini sırayla işler.
+3.  **Yeşil Tık (✅):** Tamamlandığında, ana dizindeki dosyalarınızın tepesinde linkler belirir ve `translations/en/` klasöründe İngilizce versiyonları oluşur.
 
 ---
 
-## 🏁 Kullanımı
+## ❓ Sıkça Sorulan Sorular (FAQ)
 
-1.  Repoya yeni bir `deneme.md` dosyası ekleyin (Türkçe içerik yazın).
-2.  Dosyanın en tepesine `` ve `` etiketlerini eklemeyi unutmayın.
-3.  `Commit` ve `Push` yapın.
-4.  İşlem bitince linkler otomatik eklenecektir.
-   
+**S: İngilizce çeviriyi elle düzeltebilir miyim?**
+C: Hayır. `translations` klasörü her çalışmada **otomatik olarak üzerine yazılır**. Düzeltmeleri Türkçe ana dosyada yapmalısınız.
+
+**S: Yeni bir dosya eklersem ne olur?**
+C: Örneğin `YENI_BELGE.md` eklerseniz, sistem bir sonraki çalışmada onu otomatik algılar, link ekler ve `translations/en/YENI_BELGE.md` olarak çevirisini oluşturur.
+
+**S: Neden `.env` dosyası yok?**
+C: API anahtarlarını kod içinde tutmak güvensizdir. GitHub Secrets özelliği, çalışma anında sanal bir ortam değişkeni oluşturarak güvenliği sağlar.
