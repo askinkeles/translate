@@ -104,7 +104,7 @@ Bu projeyi geliştirirken edindiğimiz kritik tecrübeler:
 
 ---
 
-## 🏁 Kullanım
+## 🏁 Kullanımı
 
 1.  Repoya yeni bir `deneme.md` dosyası ekleyin (Türkçe içerik yazın).
 2.  Dosyanın en tepesine `` ve `` etiketlerini eklemeyi unutmayın.
